@@ -60,4 +60,4 @@ def save_syosetu_novel(base_url, novel_url, save_path):
     print("====="*10, '\n')
     print("소설 스크래핑 완료.")
     
-    return file_path
+    return file_path, title
