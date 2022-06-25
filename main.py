@@ -62,8 +62,9 @@ def papago_translate(title, novel_path, proportion, combine=False):
         text_area.send_keys(text)
         
     n = int(len(lines) / proportion)
-    length = 50
+    length = 30
     trans_title = ""
+    path_list = []
     for i in range(0, proportion):
         txt = lines[n*i : n*(i+1)]
         if i == (proportion - 1):
@@ -74,11 +75,11 @@ def papago_translate(title, novel_path, proportion, combine=False):
         driver.get('https://papago.naver.com/')
         driver.implicitly_wait(10)
         
-        if i == 0:
+        if len(trans_title) == 0:
             feed_text(title)
             time.sleep(3)
             trans_title = driver.find_element(by='id', value='txtTarget').text
-            trans_title = trans_title.replace(" ", "_")
+            trans_title = trans_title.replace(" ", "_").replace("?", "-")
             driver.find_element(by='xpath', value='//*[@id="sourceEditArea"]/button').click()
         
         texts = []
@@ -97,40 +98,37 @@ def papago_translate(title, novel_path, proportion, combine=False):
                 translated_texts.append(translated)
                 driver.find_element(by='xpath', value='//*[@id="sourceEditArea"]/button').click()
                 texts = []
-            
+                
         translated_path = novel_path.replace(title, f'{i}_{trans_title}')
         with open(translated_path, 'w', encoding='utf8') as f:
             for text in translated_texts:
                 f.write(f'{text}\n\n')
-        print(translated_path, "생성 완료.")
                 
-        driver.quit()
-    
-    if combine:
-        files = os.listdir(novel_path.replace(f'{title}.txt', ''))
-        fs = []
-        for f in files:
-            if trans_title in f:
-                f_path = novel_path.replace(f'{title}.txt', f)
-                fs.append(f_path)
-        fs.sort()
+        print(translated_path, "생성 완료.")
+        path_list.append(translated_path)
         
+        driver.quit()
+        time.sleep(5)
+        
+    if combine:
         translated_path = novel_path.replace(title, f'[full]_{trans_title}')
         with open(translated_path, 'w', encoding='utf8') as new:
-            for f_path in fs:
-                with open(f_path, 'r', encoding='utf8') as old:
+            for path in path_list:
+                with open(path, 'r', encoding='utf8') as old:
                     for line in old:
                         new.write(line)
+                print(path, "추가 완료.")
         print("파일 통합 완료.")
     
     return translated_path
 
 
 
-novel_url = 'https://kakuyomu.jp/works/1177354054882006371'
-file_path, title = save_syosetu_novel(novel_url, os.getcwd())
-file_path = papago_translate(title, file_path, 10, True)
+# novel_url = 'https://kakuyomu.jp/works/1177354054884195461'
+# file_path, title = save_kakuyomu_novel(novel_url, os.getcwd())
+file_path, title = 'D:\gitRepos\jp-novel-translator\公女殿下の家庭教師.txt', '公女殿下の家庭教師'
+file_path = papago_translate(title, file_path, 50, False)
 
-novel_url = "https://ncode.syosetu.com/n4936dp/"
-file_path, title = save_kakuyomu_novel(novel_url, os.getcwd())
-file_path = papago_translate(title, file_path, 10, True)
+# novel_url = "https://ncode.syosetu.com/n5409hr/"
+# file_path, title = save_syosetu_novel(novel_url, os.getcwd())
+# file_path = papago_translate(title, file_path, 50, True)
