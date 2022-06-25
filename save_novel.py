@@ -28,9 +28,12 @@ def save_syosetu_novel(novel_url, save_path):
     print("====="*10)
     print("스크래핑 중...", '\n')
     for episode in tqdm(episodes):
-        chapter = episode.previous_sibling.previous_sibling
-        if chapter['class'] == ['chapter_title']:
-            texts.append(f"{chapter.text}\n\n")
+        try:
+            chapter = episode.previous_sibling.previous_sibling
+            if chapter['class'] == ['chapter_title']:
+                texts.append(f"{chapter.text}\n\n")
+        except TypeError:
+            pass
             
         link = f"{base_url}{episode.find('a')['href']}"
         resp = requests.get(link, headers=headers)
