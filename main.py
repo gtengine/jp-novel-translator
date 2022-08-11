@@ -14,121 +14,134 @@ from tqdm import tqdm
 
 ##################################################
 
+
 def papago_translate(title, novel_path, proportion, combine=False):
     options = Options()
     # options.add_argument('headless') # headless 모드 설정
-    options.add_argument("window-size=1920x1080") # 화면크기(전체화면)
-    options.add_argument("disable-gpu") 
+    options.add_argument("window-size=1920x1080")  # 화면크기(전체화면)
+    options.add_argument("disable-gpu")
     options.add_argument("disable-infobars")
     options.add_argument("--disable-extensions")
-    
-    # 속도 향상을 위한 옵션 해제
-    prefs = {
-        'profile.default_content_setting_values': {
-            'cookies' : 2,
-            'images': 2,
-            'plugins' : 2,
-            'popups': 2,
-            'geolocation': 2,
-            'notifications' : 2,
-            'auto_select_certificate': 2,
-            'fullscreen' : 2,
-            'mouselock' : 2,
-            'mixed_script': 2,
-            'media_stream' : 2,
-            'media_stream_mic' : 2,
-            'media_stream_camera': 2,
-            'protocol_handlers' : 2,
-            'ppapi_broker' : 2,
-            'automatic_downloads': 2,
-            'midi_sysex' : 2,
-            'push_messaging' : 2,
-            'ssl_cert_decisions': 2,
-            'metro_switch_to_desktop' : 2,
-            'protected_media_identifier': 2,
-            'app_banner': 2,
-            'site_engagement' : 2,
-            'durable_storage' : 2
-            }
-        }   
-    options.add_experimental_option('prefs', prefs)
-    options.add_experimental_option('excludeSwitches', ['enable-logging'])
-    
-    with open(novel_path, 'r', encoding='utf8') as f:
+    options.add_experimental_option("excludeSwitches", ["enable-logging"])
+
+    def devide_list(lst, n_of_list):
+        """원하는 수로 리스트 분할"""
+        n = len(lst) // n_of_list
+        re_l = [lst[i : i + n] for i in range(0, len(lst), n)]
+        if len(re_l[-1]) < 100:
+            for j in re_l[-1]:
+                re_l[-2].append(j)
+        return re_l[:-1]
+
+    with open(novel_path, "r", encoding="utf8") as f:
         lines = f.readlines()
-        
+    devied_lines = devide_list(lines, proportion)
+
+    def find_leng(lst_length):
+        """한 번에 번역할 문장 수 설정"""
+        n = 20
+        while 20 <= n:
+            if (lst_length % n) > (n * 0.8):
+                break
+            else:
+                n = n + 1
+        rest = lst_length % n
+        return n, rest
+
     def feed_text(text):
-        text_area = driver.find_element(by='id', value='txtSource')
+        text_area = driver.find_element(by="id", value="txtSource")
         text_area.send_keys(text)
-        
-    n = int(len(lines) / proportion)
-    length = 30
+
     trans_title = ""
-    path_list = []
-    for i in range(0, proportion):
-        txt = lines[n*i : n*(i+1)]
-        if i == (proportion - 1):
-            txt = lines[n*(proportion-1):]
-            
-        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+    for i, l in enumerate(devied_lines):
+        driver = webdriver.Chrome(
+            service=Service(ChromeDriverManager().install()), options=options
+        )
         driver.maximize_window()
-        driver.get('https://papago.naver.com/')
+        driver.get("https://papago.naver.com/")
         driver.implicitly_wait(10)
-        
+
         if len(trans_title) == 0:
             feed_text(title)
             time.sleep(3)
-            trans_title = driver.find_element(by='id', value='txtTarget').text
+            trans_title = driver.find_element(by="id", value="txtTarget").text
             trans_title = trans_title.replace(" ", "_").replace("?", "-")
-            driver.find_element(by='xpath', value='//*[@id="sourceEditArea"]/button').click()
-        
+            driver.find_element(
+                by="xpath", value='//*[@id="sourceEditArea"]/button'
+            ).click()
+
+        length, rest = find_leng(len(l))
         texts = []
         translated_texts = []
-        rest = len(txt) % length
-        final_idx = len(txt) - 1
-        for idx, line in enumerate(tqdm(txt)):
+        for idx, line in enumerate(tqdm(l)):
             texts.append(line)
-            if (len(texts) == length) or ((idx == final_idx) and (len(texts) == rest)):
-                source = ''.join(texts)
+            if (len(texts) == length) or (
+                (idx == (len(l) - 1)) and (len(texts) == rest)
+            ):
+                source = " ".join(texts)
                 feed_text(source)
-                WebDriverWait(driver, 60).until(EC.presence_of_element_located((By.XPATH, '//*[@id="root"]/div/div[1]/section/div/div[1]/div[2]/div/ul')))
+                WebDriverWait(driver, 60).until(
+                    EC.presence_of_element_located(
+                        (
+                            By.XPATH,
+                            '//*[@id="root"]/div/div[1]/section/div/div[1]/div[2]/div/ul',
+                        )
+                    )
+                )
                 time.sleep(5)
-                translated = driver.find_element(by='id', value='txtTarget').text
-                translated = translated.replace('.', '. ')
+                translated = driver.find_element(by="id", value="txtTarget").text
+                translated = translated.replace(".", ". ")
                 translated_texts.append(translated)
-                driver.find_element(by='xpath', value='//*[@id="sourceEditArea"]/button').click()
+                driver.find_element(
+                    by="xpath", value='//*[@id="sourceEditArea"]/button'
+                ).click()
                 texts = []
-                
-        translated_path = novel_path.replace(title, f'{i}_{trans_title}')
-        with open(translated_path, 'w', encoding='utf8') as f:
+
+        translated_path = novel_path.replace(title, f"{i}_{trans_title}")
+        with open(translated_path, "w", encoding="utf8") as f:
             for text in translated_texts:
-                f.write(f'{text}\n\n')
-                
+                f.write(f"{text}\n\n")
+
         print(translated_path, "생성 완료.")
-        path_list.append(translated_path)
-        
+
         driver.quit()
-        time.sleep(5)
-        
+
     if combine:
-        translated_path = novel_path.replace(title, f'[full]_{trans_title}')
-        with open(translated_path, 'w', encoding='utf8') as new:
-            for path in path_list:
-                with open(path, 'r', encoding='utf8') as old:
-                    for line in old:
-                        new.write(line)
-                print(path, "추가 완료.")
-        print("파일 통합 완료.")
-    
-    return translated_path
+        # trans_title = ''
+        print()
+        print("=====" * 10)
+        dir_path = os.path.join(os.getcwd(), "novel")
+        file_list = os.listdir(dir_path)
+        c = 0
+        f_path_list = []
+        while True:
+            for file in file_list:
+                try:
+                    n = int(file.split("_")[0])
+                    if c == n and trans_title in file:
+                        f_path = os.path.join(dir_path, file)
+                        f_path_list.append(f_path)
+                except:
+                    pass
+            c += 1
+            if c == len(file_list):
+                break
+
+        final_file = novel_path.replace(title, f"[full]_{trans_title}")
+        with open(final_file, "w", encoding="utf-8") as ff:
+            for f in f_path_list:
+                with open(f, "r", encoding="utf-8") as ef:
+                    for line in ef:
+                        ff.write(line)
+                print(f"추가 완료: {f}")
+            print(f"\n파일 통합 완료: {final_file}")
+
+    return final_file
 
 
+# novel_url = 'https://kakuyomu.jp/works/16816927859226071130'
+# file_path, title = save_kakuyomu_novel(novel_url, os.path.join(os.getcwd(), 'novel'))
+novel_url = "https://ncode.syosetu.com/n3842hk/"
+file_path, title = save_syosetu_novel(novel_url, os.path.join(os.getcwd(), "novel"))
 
-# novel_url = 'https://kakuyomu.jp/works/1177354054884195461'
-# file_path, title = save_kakuyomu_novel(novel_url, os.getcwd())
-file_path, title = 'D:\gitRepos\jp-novel-translator\公女殿下の家庭教師.txt', '公女殿下の家庭教師'
-file_path = papago_translate(title, file_path, 50, False)
-
-# novel_url = "https://ncode.syosetu.com/n5409hr/"
-# file_path, title = save_syosetu_novel(novel_url, os.getcwd())
-# file_path = papago_translate(title, file_path, 50, True)
+file_path = papago_translate(title, file_path, 10, True)
