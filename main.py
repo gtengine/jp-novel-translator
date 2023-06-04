@@ -139,9 +139,9 @@ def papago_translate(title, novel_path, proportion, combine=False):
     return final_file
 
 
-# novel_url = 'https://kakuyomu.jp/works/16816927859226071130'
-# file_path, title = save_kakuyomu_novel(novel_url, os.path.join(os.getcwd(), 'novel'))
-novel_url = "https://ncode.syosetu.com/n3842hk/"
-file_path, title = save_syosetu_novel(novel_url, os.path.join(os.getcwd(), "novel"))
+novel_url = 'https://kakuyomu.jp/works/1177354054884195461'
+file_path, title = save_kakuyomu_novel(novel_url, os.getcwd())
+# novel_url = "https://ncode.syosetu.com/n3842hk/"
+# file_path, title = save_syosetu_novel(novel_url, os.path.join(os.getcwd(), "novel"))
 
 file_path = papago_translate(title, file_path, 10, True)
